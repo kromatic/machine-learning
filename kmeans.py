@@ -1,32 +1,46 @@
 #!/usr/bin/env python3
 
 import numpy as np
-from collections import defaultdict
-import random
 
 def kmeans(data, k):
-    """Partition data into k clusters using the kmeans algorithm."""
-    # get lower and upper bounds in data for each dimension
-    if not data or k <= 0:
+    """Partition data into k clusters using the k-means algorithm."""
+    # check for faulty input
+    if not data.shape[0] or k <= 0:
         raise ValueError
+    # set up
     n = data.shape[0]
     d = data.shape[1]
-    cluster_ids = range(k)
-    mins = np.vstack((data.min(axis=0),) * k)
-    multipliers = np.vstack((data.max(axis=0) - mins,) * k)
-    # initialize cluster centers to random numbers rescricted by bounds
-    centers = mins + multipliers * np.random.random((k, d))
-    prev_assignments = None    # used to check for terminating condition
-    assignments = np.array([-1 for _ in data])   # begin with one dummy cluster
-    while tuple(assignments) != prev_assignments:
-        prev_assignments = tuple(assignments)
-        for i in range(n):
-            assignments[i] = min(cluster_ids,
-                              key=lambda j: distance(data[i], centers[j]))
+    # initialize cluster centers to random numbers restricted by bounds
+    mins = data.min(axis=0)
+    multipliers = data.max(axis=0) - mins
+    centers = [mins + multipliers * np.random.random(d) for _ in range(k)]
+    # initialize clusters
+    prev_clusters = None
+    clusters = (set(range(n)),) + tuple(set() for _ in range(k-1))
+    while clusters != prev_clusters:
+        prev_clusters = tuple(cluster.copy() for cluster in clusters)
+        for j in range(k):
+            for i in tuple(clusters[j]):
+                new_j = min(range(k), key=lambda j: dist(data[i], centers[j]))
+                if dist(data[i], centers[new_j]) < dist(data[i], centers[j]):
+                    clusters[j].remove(i)
+                    clusters[new_j].add(i)
+        for j in range(k):
+            centers[j] = sum(data[i] for i in clusters[j]) / len(clusters[j])
+    return clusters, centers
 
-        clusters = defaultdict(set)
-        for i in range(n):
-            clusters[assignments[i]].add(data[i])
-        for j in cluster_ids:
-            centers[j] =  tuple(sum(x[k] for x in clusters[j])/len(clusters[j]) for k in range(d))
-    return assignments
+def dist(a, b):
+    return np.sqrt(sum((a-b)**2))
+
+def square_distance_cost(data, clusters, centers):
+    return sum(distance(data[i], centers[j])**2
+               for i in clusters[j] for j in range(len(clusters)))
+
+if __name__ == "__main__":
+    data = []
+    while True:
+        try:
+            data.append([float(x) for x in input().split()])
+        except EOFError:
+            break
+    print(kmeans(np.array(data), 3))
