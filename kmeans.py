@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
+# Leo Gladkov
+
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy import stats
 
 def random_centers(data, k):
     """Initialize random cluster centers for the k-means algorithm."""
@@ -40,20 +41,23 @@ def kmeans(data, k, initializer=random_centers):
         costs.append(square_distance_cost(data, clusters, centers))
     return clusters, centers, costs
 
-def kmeanspp(data, k):
+def kmeans_pp(data, k):
+    """Initialize cluster centers for k-means using k-means++."""
     n = len(data)
     centers = [data[np.random.choice(range(n))]]
     for i in range(1, k):
-        weights = np.array([min(distance(x, centers[p])**2 for p in range(i))
+        weights = np.array([min(distance(x, centers[p]) for p in range(i))**2
                             for x in data])
         weights *= 1 / sum(weights)
         centers.append(data[np.random.choice(range(n), p=weights)])
     return np.array(centers)
 
 def distance(a, b):
+    """Euclidian distance between a and b."""
     return np.sqrt(sum((a-b)**2))
 
 def square_distance_cost(data, clusters, centers):
+    """J_avg^2 cost of cluster configuration."""
     return sum(distance(data[i], centers[j])**2
                for j in range(len(clusters)) for i in clusters[j])
 
@@ -88,6 +92,6 @@ if __name__ == "__main__":
         plt.xlabel("# of iterations")
         plt.ylabel(r"$J_{avg^2}$")
         for _ in range(20):
-            _, _, costs = kmeans(data, k, initializer=kmeanspp)
+            _, _, costs = kmeans(data, k, initializer=kmeans_pp)
             plt.plot(costs)
         plt.show()
