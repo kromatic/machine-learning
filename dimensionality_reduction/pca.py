@@ -28,5 +28,6 @@ if __name__ == "__main__":
         plt.title("PCA Dimensionality Reduction")
         plt.xlabel("x")
         plt.ylabel("y")
-        plt.scatter(reduced_data[:, 0], reduced_data[:, 1], c=reduced_data[:, 2])
+        plt.scatter(reduced_data[:, 0], reduced_data[:, 1],
+                    c=reduced_data[:, 2])
         plt.show()
