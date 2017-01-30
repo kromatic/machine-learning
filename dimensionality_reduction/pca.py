@@ -6,13 +6,12 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-def pca(data, k):
-    """Returns data written in terms of first k principal components."""
-    assert k < data.shape[1]
+def pca(data, p):
+    """Returns data written in terms of first p principal components."""
     cov_matrix = np.cov(data[:, :-1], rowvar=False, bias=True)
     _, eigenvectors = np.linalg.eigh(cov_matrix)
-    reduction_transformation = np.linalg.inv(eigenvectors)[-k:]
-    reduced_data = np.empty((data.shape[0], k+1))
+    reduction_transformation = np.linalg.inv(eigenvectors)[-p:]
+    reduced_data = np.empty((data.shape[0], p+1))
     for i in range(reduced_data.shape[0]):
         reduced_data[i, :-1] = reduction_transformation.dot(data[i, :-1])
     reduced_data[:, -1] = data[:, -1]
