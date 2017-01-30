@@ -46,17 +46,16 @@ def euclid_distance(u, v):
     return np.linalg.norm(u-v)
 
 if __name__ == "__main__":
-    filename, p = sys.argv[1], int(sys.argv[2])
+    filename = sys.argv[1]
     data = []
     with open(filename, "r") as data_file:
         for line in data_file:
             data.append([float(x) for x in line.split()])
     data = np.array(data)
-    reduced_data = isomap(data, p)
-    if p == 2:
-        plt.title("Isomap Dimensionality Reduction")
-        plt.xlabel("x")
-        plt.ylabel("y")
-        plt.scatter(reduced_data[:, 0], reduced_data[:, 1],
-                    c=reduced_data[:, 2])
-        plt.show()
+    reduced_data = isomap(data, 2)
+    plt.title("Isomap Dimensionality Reduction")
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.scatter(reduced_data[:, 0], reduced_data[:, 1],
+                c=reduced_data[:, 2])
+    plt.show()

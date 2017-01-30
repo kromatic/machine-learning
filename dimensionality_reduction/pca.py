@@ -19,17 +19,16 @@ def pca(data, k):
     return reduced_data
 
 if __name__ == "__main__":
-    filename, k = sys.argv[1], int(sys.argv[2])
+    filename = sys.argv[1]
     data = []
     with open(filename, "r") as data_file:
         for line in data_file:
             data.append([float(x) for x in line.split()])
     data = np.array(data)
-    reduced_data = pca(data, k)
-    if k == 2:
-        plt.title("PCA Dimensionality Reduction")
-        plt.xlabel("x")
-        plt.ylabel("y")
-        plt.scatter(reduced_data[:, 0], reduced_data[:, 1],
-                    c=reduced_data[:, 2])
-        plt.show()
+    reduced_data = pca(data, 2)
+    plt.title("PCA Dimensionality Reduction")
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.scatter(reduced_data[:, 0], reduced_data[:, 1],
+                c=reduced_data[:, 2])
+    plt.show()
