@@ -3,7 +3,7 @@
 # Leo Gladkov
 
 """
-Implementations of binary and multiclass perceptron algorithms.
+Apply binary and multiclass perceptron algorithms to classify data.
 
 usage: ./perceptron.py train_xs_file train_ys_file test_xs_file [--multiclass]
 """
@@ -24,7 +24,10 @@ def predict(train_xs, train_ys, test_xs, multiclass):
     return predict_ys, mistakes
 
 def binary_perceptron(train_xs, train_ys, m=5):
-    """Learn train data using online binary perceptron m times."""
+    """Learn binary classification of training data using online perceptron.
+
+    Training data is run through perceptron m times.
+    """
     w = np.zeros(train_xs.shape[1])
     mistakes = [0]
     for _ in range(m):
@@ -38,7 +41,10 @@ def binary_perceptron(train_xs, train_ys, m=5):
     return w, mistakes
 
 def multiclass_perceptron(train_xs, train_ys, m=5):
-    """Learn train data using online binary perceptron m times."""
+    """Learn multiclassification of training data using online perceptron.
+
+    Training data is run through perceptron m times.
+    """
     num_classes = len(set(train_ys))
     ws = np.zeros((num_classes, train_xs.shape[1]))
     mistakes = [0]
@@ -76,8 +82,8 @@ if __name__ == "__main__":
     multiclass = False
     if len(sys.argv) > 4 and sys.argv[4] == "--multiclass":
         multiclass = True
-    # convert everything into numpy arrays
     train_xs, train_ys, test_xs = map(np.array, all_data)
+    # run perceptron
     predict_ys, mistakes = predict(train_xs, train_ys, test_xs, multiclass)
     with open(sys.argv[3].rstrip("digits") + "predictions", "w") as f:
         for y in predict_ys:
