@@ -2,6 +2,15 @@
 
 # Leo Gladkov
 
+"""
+Apply PCA to dimensionally reduce data.
+
+Default reduction is to 2 dimensions, but PCA is implemented for the general
+case of reducing to m dimensions.
+
+Usage: ./pca.py datafile_name
+"""
+
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,10 +20,8 @@ def pca(data, m):
     cov_matrix = np.cov(data[:, :-1], rowvar=False, bias=True)
     _, eigenvectors = np.linalg.eigh(cov_matrix)
     reduction_transformation = np.linalg.inv(eigenvectors)[-m:]
-    reduced_data = np.empty((data.shape[0], m+1))
-    for i in range(reduced_data.shape[0]):
-        reduced_data[i, :-1] = reduction_transformation.dot(data[i, :-1])
-    reduced_data[:, -1] = data[:, -1]
+    reduced_data = reduction_transformation.dot(data.T[:-1])
+    reduced_data = np.concatenate((reduced_data.T, data[:, -1:]), axis=1)
     return reduced_data
 
 if __name__ == "__main__":
@@ -28,6 +35,5 @@ if __name__ == "__main__":
     plt.title("PCA Dimensionality Reduction")
     plt.xlabel("x")
     plt.ylabel("y")
-    plt.scatter(reduced_data[:, 0], reduced_data[:, 1],
-                c=reduced_data[:, 2])
+    plt.scatter(reduced_data[:, 0], reduced_data[:, 1], c=reduced_data[:, 2])
     plt.show()

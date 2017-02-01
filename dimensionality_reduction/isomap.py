@@ -2,6 +2,15 @@
 
 # Leo Gladkov
 
+"""
+Apply Isomap to dimensionally reduce data.
+
+Default reduction is to 2 dimensions, but Isomap is implemented for the general
+case of reducing to m dimensions.
+
+Usage: ./isomap.py datafile_name
+"""
+
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,9 +29,9 @@ def isomap(data, m):
     diagonal = np.concatenate(([0 for _ in range(n-m)],
                                np.sqrt(eigenvals[-m:])))
     sqrt_big_lambda = np.diag(diagonal)
-    res = eigenvectors.dot(sqrt_big_lambda[:, -m:])
-    res = np.concatenate((res, data[:, -1:]), axis=1)
-    return res
+    reduced_data = eigenvectors.dot(sqrt_big_lambda[:, -m:])
+    reduced_data = np.concatenate((reduced_data, data[:, -1:]), axis=1)
+    return reduced_data
 
 def knn_graph(data, k=None):
     """Returns symmetric matrix of edge weights in k-NN graph of data."""
@@ -55,7 +64,7 @@ def euclid_distance(u, v):
 if __name__ == "__main__":
     filename = sys.argv[1]
     data = []
-    with open(filename, "r") as data_file:
+    with open(filename) as data_file:
         for line in data_file:
             data.append([float(x) for x in line.split()])
     data = np.array(data)
