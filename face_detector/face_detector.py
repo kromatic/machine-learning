@@ -14,42 +14,46 @@ def construct_cascade(pos_indices, neg_indices, fpb=0.01, adb_fpb=0.3):
     cnt = 1
     while True:
         t0 = time.time()
-        classifier, neg_indices = adaboost(pos_indices, neg_indices, adb_fpb)
+        classifier, neg_indices, fpr = adaboost(pos_indices, neg_indices, adb_fpb)
         cascade.append(classifier)
         t1 = time.time()
-        print("Added classifier {} in {} minutes.".format(cnt, (t1-t0)/60))
-        print("Number of negative examples left: {}".format(len(neg_indices)))
+        print("added classifier {} in {:.1f} minutes:".format(cnt, (t1-t0)/60))
+        print("\tfpr={:.2f}".format(fpr))
+        print("\tnumber of negative examples left: {}".format(len(neg_indices)))
         cnt += 1
         if len(neg_indices)/total_neg <= fpb:
             return cascade
 
-def detect_faces(img_file, cascade, win):
-    step = win//6
-    tol = win//4
+def detect_faces(img_file, cascade, win, stepm=0.1, tol=0.2):
+    step = int(stepm*win)
     with Image.open(img_file) as img:
-        iimg = get_iimage(np.reshape(img.getdata(), img.size))
+        iimg = get_iimage(np.reshape(img.getdata(), (img.height, img.width)))
         img_color = img.convert("RGB")
         draw = ImageDraw.Draw(img_color)
         face_corners = set()
-        for i in range(img.height-win+1):
-            while j < img.width-win+1:
-                if overlap(i, j, face_corners, dim, tol):
-                    j += 2*win-tol-1
+        for i in range(0, img.height-win+1, step):
+            for j in range(0, img.width-win+1, step):
+                if win_overlap_any((i, j), face_corners, dim, tol):
                     continue
                 if apply_cascade(cascade, iimg[i:i+win, j:j+win]):
                     face_corners.add((i, j))
                     draw.rectangle((i, j, i+win, j+win), outline=(255, 0, 0))
-                    j += win-tol-1
-                else:
-                    j += step
         img_color.save("faces__" + img_file)
         img_color.show()
 
-def overlap(i, j, corners, dim, tol):
-    for x, y in corners:
-        if tol < i-x < dim-tol and tol < j+dim-y-1 < dim-tol:
-            return True
-    return False
+def win_overlap_any(c, corners, dim, tol):
+    return any(win_overlap(c, c1, dim, tol) for c1 in corners)
+
+def win_overlap(c1, c2, dim, tol):
+    i, k = c1[0], c2[0]+dim
+    j, l = c1[1], c2[1]+dim
+    if c2[0] > c1[0]:
+        i, k = c2[0], c1[0]+dim
+    if c2[1] > c1[1]:
+        j, l = c2[1], c1[1]+dim
+    if k-i <= 0 or l-j <= 0:
+        return False
+    return (k-i)*(l-j)/(dim*dim) > tol
 
 def apply_cascade(cascade, iimg_win):
     return all(apply_classifier(classifier, 0, iimg_win)
@@ -76,8 +80,9 @@ def adaboost(pos_indices, neg_indices, fpb):
         false_positives = set(i for i in neg_indices
                               if apply_classifier(classifier,
                                                   big_theta, iimages[i]))
-        if len(false_positives)/len(neg_indices) <= fpb:
-            return classifier, false_positives
+        fpr = len(false_positives)/len(neg_indices)
+        if fpr <= fpb:
+            return classifier, false_positives, fpr
         # update data set weights
         for i in training_indices:
             if apply_weak_learner(h, iimages[i]) == ys[i]:
@@ -90,7 +95,6 @@ def adaboost(pos_indices, neg_indices, fpb):
 def best_weak_learner(training_indices, w):
     res = min((optimize_weak_learner(j, training_indices, w)
                 for j in range(feature_tbl.shape[0])), key=lambda t: t[1])
-    print(res[1])
     return res
 
 def optimize_weak_learner(j, training_indices, w):
@@ -135,26 +139,26 @@ def compute_feature(j, iimg_win):
 
 def rect_sum(rect, iimg_win):
     i, j, k, l = rect
-    a = 0 if i == 0 or j == 0 else iimg_win[i-1, j-1]
-    b = 0 if i == 0 else iimg_win[i-1, l]
-    c = 0 if j == 0 else iimg_win[k, j-1]
+    a = iimg_win[i-1, j-1] if i > 0 and j > 0 else 0
+    b = iimg_win[i-1, l] if i > 0 else 0
+    c = iimg_win[k, j-1] if j > 0 else 0
     d = iimg_win[k, l]
     return a+d-b-c
 
 def get_training_data(faces_dir, backgrounds_dir):
     faces, backgrounds = glob(faces_dir + "/*"), glob(backgrounds_dir + "/*")
     with Image.open(faces[0]) as img:
-        dim = img.height
+        dim = img.width
     iimages = np.empty((len(faces) + len(backgrounds), dim, dim), dtype=np.int)
     ys = np.ones(len(faces) + len(backgrounds), dtype=np.int)
     ys[len(faces):].fill(-1)
     pos_indices = set(range(len(faces)))
     neg_indices = set(range(len(faces), ys.shape[0]))
-    read_images(faces, dim, iimages)
-    read_images(backgrounds, dim, iimages[len(faces):])
+    read_training_images(faces, dim, iimages)
+    read_training_images(backgrounds, dim, iimages[len(faces):])
     return iimages, ys, pos_indices, neg_indices, dim
 
-def read_images(imgs, dim, res):
+def read_training_images(imgs, dim, res):
     size = (dim, dim)
     for i in range(len(imgs)):
         with Image.open(imgs[i]) as img:
@@ -179,10 +183,10 @@ def compute_feature_tbl(dim, step=4):
                 for j in range(0, dim-w+1, step):
                     if i+2*h <= dim:
                         res.append(((i, j, i+h-1, j+w-1),
-                                    (i+h-1, j, i+2*h-1, j+w-1)))
+                                    (i+h, j, i+2*h-1, j+w-1)))
                     if j+2*w <= dim:
                         res.append(((i, j, i+h-1, j+w-1),
-                                    (i, j+w-1, i+h-1, j+2*w-1)))
+                                    (i, j+w, i+h-1, j+2*w-1)))
     return np.array(res)
 
 if __name__ == "__main__":
@@ -190,8 +194,5 @@ if __name__ == "__main__":
     data = get_training_data(faces_dir, backgrounds_dir)
     iimages, ys, pos_indices, neg_indices, dim = data
     feature_tbl = compute_feature_tbl(dim)
-    print(iimages)
-    print(ys)
-    print(feature_tbl)
     cascade = construct_cascade(pos_indices, neg_indices)
     detect_faces(test_img, cascade, dim)
