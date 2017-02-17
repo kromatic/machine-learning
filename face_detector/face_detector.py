@@ -17,8 +17,8 @@ def construct_cascade(pos_indices, neg_indices, fpb=0.01, adb_fpb=0.3):
         classifier, neg_indices = adaboost(pos_indices, neg_indices, adb_fpb)
         cascade.append(classifier)
         t1 = time.time()
-        print("Added classifier {} in {} minutes.".format(cnt, (t1-t0)/60)
-        print("Num of negative examples left: {}".format(len(neg_indices)))
+        print("Added classifier {} in {} minutes.".format(cnt, (t1-t0)/60))
+        print("Number of negative examples left: {}".format(len(neg_indices)))
         cnt += 1
         if len(neg_indices)/total_neg <= fpb:
             return cascade
@@ -31,7 +31,7 @@ def detect_faces(img_file, cascade, win):
         img_color = img.convert("RGB")
         draw = ImageDraw.Draw(img_color)
         face_corners = set()
-        for i in range(img.height-win+1)
+        for i in range(img.height-win+1):
             while j < img.width-win+1:
                 if overlap(i, j, face_corners, dim, tol):
                     j += 2*win-tol-1
